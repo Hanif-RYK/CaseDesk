@@ -887,6 +887,7 @@ td { overflow-wrap: break-word; }
 .form-actions .saved-note { margin-right: auto; }
 .profile-row { display: flex; gap: 14px; align-items: center; margin-top: 16px; }
 .setting-list > li { justify-content: flex-start; }
+.setting-list .grow { min-width: 0; overflow-wrap: anywhere; }
 .setting-list svg { width: 18px; height: 18px; color: var(--ink-3); flex: none; }
 .inline-add { display: flex; gap: 10px; margin-top: 16px; }
 .inline-add .input { max-width: 340px; }
