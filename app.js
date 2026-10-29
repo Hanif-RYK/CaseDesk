@@ -29,7 +29,8 @@
     $$("[data-currency]", scope).forEach(function (m) { m.textContent = symbol().trim(); });
   }
   // The demo's "today" (Monday 2 November 2026), used for rows added with forms. Set CASEDESK.today, or use the real date, in your project.
-  var today = /^\d{4}-\d{2}-\d{2}$/.test(cfg.today || "") ? cfg.today : "2026-11-02";
+  function realDate(v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v || "")) return false; var p = v.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]); return d.getMonth() === +p[1] - 1 && d.getDate() === +p[2]; }
+  var today = realDate(cfg.today) ? cfg.today : "2026-11-02";
   function shortDate(iso) { var p = iso.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
   window.CaseDesk = { fmt: fmt, symbol: symbol, tax: function () { return cfg.tax; }, showMoney: showMoney };
   if (cfg.currency !== "$") showMoney(document);
@@ -95,6 +96,8 @@
     $$("[data-dropdown].open").forEach(function (d) { d.classList.remove("open"); var b = $("[data-dropdown-toggle]", d); if (b) b.setAttribute("aria-expanded", "false"); });
   }
   document.addEventListener("click", function (e) { if (!e.target.closest(".menu")) closeDropdowns(); });
+  // iPhone Safari sends no click for a tap on plain text, so close open menus on any press outside them too
+  document.addEventListener("pointerdown", function (e) { if (!e.target.closest("[data-dropdown]")) closeDropdowns(); });
 
   /* Modals --------------------------------------------------------------- */
   var lastFocus = null;
@@ -130,6 +133,9 @@
       $$("[data-f]", m).forEach(function (el) { var k = el.getAttribute("data-f"); if (k in f) { if ("value" in el && el.tagName !== "BUTTON") el.value = f[k]; else el.textContent = f[k]; } });
       $$("[data-f-href]", m).forEach(function (el) { var k = el.getAttribute("data-f-href"); if (k in f) el.setAttribute("href", f[k]); });
       m.cdRow = b.closest("tr");
+      // The row's status may have changed on this page: show it, and only the buttons that fit it
+      var st = m.cdRow && rowStatus(m.cdRow);
+      if (st) { $$('[data-f="status"]', m).forEach(function (el) { el.textContent = st; }); showFor(m, st); }
     }
     openModal(b.getAttribute("data-modal-open"));
   });
@@ -138,7 +144,8 @@
   // Pressing Enter inside a modal form runs the modal's main button instead of reloading the page
   $$(".modal form").forEach(function (f) {
     function run() { var b = $("[data-modal-submit]", f.closest(".modal")); if (b) b.click(); }
-    f.addEventListener("submit", function (e) { e.preventDefault(); run(); });
+    // The footer button is the form's submit button (form="id"); its own click already ran, so only Enter needs run()
+    f.addEventListener("submit", function (e) { e.preventDefault(); if (!(e.submitter && e.submitter.hasAttribute("data-modal-submit"))) run(); });
     f.addEventListener("keydown", function (e) {
       if (e.key === "Enter" && e.target.tagName === "INPUT" && !/checkbox|radio|file|button|submit/.test(e.target.type)) { e.preventDefault(); run(); }
     });
@@ -289,22 +296,22 @@
       if (info) info.textContent = visible.length ? "Showing " + ((page - 1) * perPage + 1) + "–" + ((page - 1) * perPage + slice.length) + " of " + visible.length : "No results";
       if (pager) {
         pager.innerHTML = "";
-        var mk = function (label, p, dis, act) {
+        var mk = function (label, p, dis, act, name) {
           var b = document.createElement("button");
           b.type = "button"; b.innerHTML = label; b.disabled = dis;
           if (act) { b.className = "active"; b.setAttribute("aria-current", "page"); }
-          b.setAttribute("aria-label", typeof p === "number" ? "Page " + p : label);
+          b.setAttribute("aria-label", name || "Page " + p);
           b.addEventListener("click", function () { page = p; apply(); });
           pager.appendChild(b);
         };
-        mk("‹", page - 1, page === 1);
+        mk("‹", page - 1, page === 1, false, "Previous page");
         // Many pages: show 1 … 4 5 6 … 11 so the pager fits on a phone
         var near = pages <= 7 ? null : [1, pages, page - 1, page, page + 1].concat(page <= 3 ? [2, 3, 4] : page >= pages - 2 ? [pages - 3, pages - 2, pages - 1] : []);
         for (var i = 1; i <= pages; i++) {
           if (!near || near.indexOf(i) > -1) mk(String(i), i, false, i === page);
           else if (near.indexOf(i - 1) > -1) { var gap = document.createElement("span"); gap.className = "pager-gap"; gap.textContent = "…"; gap.setAttribute("aria-hidden", "true"); pager.appendChild(gap); }
         }
-        mk("›", page + 1, page === pages);
+        mk("›", page + 1, page === pages, false, "Next page");
       }
     }
     $$("th[data-sort]", table).forEach(function (th) {
@@ -371,13 +378,16 @@
   function validate(form) {
     var ok = true;
     // Required fields must be filled in; optional fields are checked only when something was typed
-    $$("input, select, textarea", form).filter(function (f) { return f.required || (f.value.trim() && (f.hasAttribute("pattern") || f.type === "email" || f.type === "number")); }).forEach(function (f) {
+    $$("input, select, textarea", form).filter(function (f) { return f.required || (f.value.trim() && (f.hasAttribute("pattern") || f.type === "email" || f.type === "number" || f.hasAttribute("data-not-before"))); }).forEach(function (f) {
       var v = f.value.trim(), n = Number(v);
+      // data-not-before="opened": a date that must not be earlier than the form's "opened" date
+      var nb = f.getAttribute("data-not-before"), other = nb && f.form && f.form.elements[nb];
       var bad = f.type === "checkbox" ? !f.checked : !v || (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) || (f.minLength > 0 && f.value.length < f.minLength) ||
         (f.type === "number" && (!isFinite(n) || (f.min !== "" && n < Number(f.min)) || (f.max !== "" && n > Number(f.max)) || stepBad(f, n))) ||
         (f.hasAttribute("pattern") && !new RegExp("^(?:" + f.getAttribute("pattern") + ")$").test(v)) ||
         // data-amount: money from 0.01 to 999,999.99
-        (f.hasAttribute("data-amount") && !(Number(v.replace(/,/g, "")) >= 0.01 && Number(v.replace(/,/g, "")) <= 999999.99));
+        (f.hasAttribute("data-amount") && !(Number(v.replace(/,/g, "")) >= 0.01 && Number(v.replace(/,/g, "")) <= 999999.99)) ||
+        (other && other.value && v < other.value);
       f.classList.toggle("is-invalid", bad);
       f.setAttribute("aria-invalid", bad);
       if (bad && ok) { f.focus(); ok = false; }
@@ -405,11 +415,26 @@
     });
     $$("input, select, textarea", form).forEach(function (f) { f.addEventListener("input", function () { if (f.classList.contains("is-invalid")) { f.classList.remove("is-invalid"); f.removeAttribute("aria-invalid"); } }); });
   });
+  /* Dependent select: <select data-depends-on="ni-client"> lists only the options whose data-client matches the chosen value */
+  $$("[data-depends-on]").forEach(function (sel) {
+    var parent = document.getElementById(sel.getAttribute("data-depends-on")); if (!parent) return;
+    function update() {
+      var want = parent.value;
+      $$("option", sel).forEach(function (o) { if (!o.value) return; var ok = o.getAttribute("data-client") === want; o.hidden = !ok; o.disabled = !ok; });
+      if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) sel.value = "";
+      sel.disabled = !want;
+    }
+    parent.addEventListener("change", update);
+    if (parent.form) parent.form.addEventListener("reset", function () { setTimeout(update, 0); });
+    update();
+  });
   $$(".dropzone").forEach(function (z) {
-    var input = $("input[type=file]", z), label = $("[data-dropzone-label]", z);
+    // The file input sits next to the <button class="dropzone"> (or inside an older <div class="dropzone">)
+    var input = $("input[type=file]", z) || (z.nextElementSibling && z.nextElementSibling.matches("input[type=file]") ? z.nextElementSibling : null), label = $("[data-dropzone-label]", z);
+    if (!input) return;
     var show = function (files) { if (label && files.length) label.textContent = files.length === 1 ? files[0].name : files.length + " files selected"; };
     z.addEventListener("click", function (e) { if (e.target !== input) input.click(); });
-    z.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+    if (z.tagName !== "BUTTON") z.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
     input.addEventListener("change", function () { show(input.files); });
     ["dragenter", "dragover"].forEach(function (t) { z.addEventListener(t, function (e) { e.preventDefault(); z.classList.add("is-over"); }); });
     ["dragleave", "drop"].forEach(function (t) { z.addEventListener(t, function (e) { e.preventDefault(); z.classList.remove("is-over"); }); });
@@ -440,6 +465,14 @@
     var target = $(form.getAttribute("data-add-to"));
     if (!tpl || !target) return;
     var vals = { today: shortDate(today), iso: today, id: String(Math.floor(4822 + Math.random() * 100)), me: "Eleanor Vance" };
+    // {nextNo}: <form data-next-no="INV-2026-"> gives the next free number after the highest one already on the page
+    var prefix = form.getAttribute("data-next-no");
+    if (prefix) {
+      var high = 0, re = new RegExp(prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(\\d+)", "g"), mm, holderTable = target.closest("[data-table]") || target;
+      var txt = (holderTable.cdTable ? holderTable.cdTable.allRows().map(function (r) { return r.textContent; }).join(" ") : holderTable.textContent);
+      while ((mm = re.exec(txt))) high = Math.max(high, +mm[1]);
+      vals.nextNo = prefix + ("0000" + (high + 1)).slice(-4);
+    }
     $$("[name]", form).forEach(function (f) {
       var v = f.type === "checkbox" ? (f.checked ? "Yes" : "No") : f.value.trim();
       vals[f.name] = v;
@@ -447,6 +480,8 @@
       var opt = f.tagName === "SELECT" && f.options[f.selectedIndex];
       if (opt && opt.hasAttribute("data-tone")) vals[f.name + "Tone"] = opt.getAttribute("data-tone");
       if (opt) vals[f.name + "Text"] = opt.text;
+      // Any other data-* of the chosen option: data-role → {fieldRole}, data-color → {fieldColor}, data-rate → {fieldRate}
+      if (opt) Object.keys(opt.dataset).forEach(function (k) { if (k !== "tone") vals[f.name + k.charAt(0).toUpperCase() + k.slice(1)] = opt.dataset[k]; });
       if (f.type === "date" && v) vals[f.name + "Text"] = shortDate(v);
       if (f.name === "name" || f.name === "contact") {
         var parts = v.split(/\s+/);
@@ -458,6 +493,12 @@
       vals.money = fmt(amt); vals.amountRaw = amt.toFixed(2);
       // {totalMoney} / {totalRaw} = the amount plus tax at the firm's rate (Settings → Firm)
       vals.totalMoney = fmt(total); vals.totalRaw = total.toFixed(2);
+    }
+    // Time entries: the fee earner's rate (data-rate on the chosen <option>) × hours → {rateMoney}, {lineMoney}
+    var rateOpt = $$("select", form).map(function (f) { return f.options[f.selectedIndex]; }).filter(function (o) { return o && o.hasAttribute("data-rate"); })[0];
+    if (rateOpt && vals.hrs) {
+      var rate = Number(rateOpt.getAttribute("data-rate")) || 0, hrs = Number(vals.hrs) || 0, line = Math.round(rate * hrs * 100) / 100;
+      vals.hrs = hrs.toFixed(1); vals.rateRaw = String(rate); vals.rateMoney = fmt(rate, true); vals.lineRaw = line.toFixed(2); vals.lineMoney = fmt(line);
     }
     // {fieldMoney} = any decimal field (cost, price …) in the store currency, or "—" when left empty
     $$("input[inputmode=decimal][name]", form).forEach(function (f) {
@@ -472,7 +513,14 @@
     if (table && table.cdTable) table.cdTable.add(el);
     else target.insertBefore(el, target.firstChild);
     bindWithin(el);
+    syncRow(el);
   }
+  /* Menu items with data-show-for="Sent|Overdue" are shown only while the row's status is one of those */
+  function rowStatus(tr) { var b = $(".badge", $("[data-status-cell]", tr) || tr); return b ? b.textContent.trim() : tr.getAttribute("data-status") || ""; }
+  function showFor(scope, st) { $$("[data-show-for]", scope).forEach(function (x) { x.hidden = x.getAttribute("data-show-for").split("|").indexOf(st) < 0; }); }
+  function syncRow(tr) { if (tr && tr.querySelector && $("[data-show-for]", tr)) showFor(tr, rowStatus(tr)); }
+  // Rows on later pages of a table are not in the page yet, so take them from the table too
+  $$("[data-table]").reduce(function (all, w) { return w.cdTable ? all.concat(w.cdTable.allRows()) : all; }, $$("tr")).forEach(syncRow);
   // Re-bind dropdowns and toasts inside newly added rows, and show their prices in the store currency
   function bindWithin(el) {
     showMoney(el);
@@ -499,14 +547,17 @@
       toast(b.getAttribute("data-done") || "Removed");
     } else if (parts[0] === "status") {
       var badge = $(".badge", tr.querySelector("[data-status-cell]") || tr);
-      if (badge) { badge.className = "badge badge-" + parts[2]; badge.textContent = parts[1]; }
+      if (badge) { badge.className = "badge" + (parts[2] && parts[2] !== "plain" ? " badge-" + parts[2] : ""); badge.textContent = parts[1]; }
       // An invoice marked as paid has nothing left to pay: [data-balance-cell] shows 0.00
       var bal = parts[1] === "Paid" && $("[data-balance-cell]", tr);
       if (bal) { bal.setAttribute("data-value", "0.00"); bal.innerHTML = '<span data-money="0.00">' + fmt(0) + "</span>"; }
       // The row's data-status is what the table filter matches: change it only when the filter has that value
       var flt = wrap && $("[data-table-filter]", wrap);
       if (!flt || $$("option", flt).some(function (o) { return o.value === parts[1]; })) tr.setAttribute("data-status", parts[1]);
+      syncRow(tr);
       if (wrap && wrap.cdTable) wrap.cdTable.refresh();
+      // The clicked item may now be hidden, so keep keyboard focus on the row's menu button
+      var tg = $("[data-dropdown-toggle]", tr); if (tg && tg.getClientRects().length) tg.focus();
       toast(b.getAttribute("data-done") || "Status changed to " + parts[1]);
     }
   });
@@ -643,6 +694,8 @@
   // Ignore stored data that is not a {first, last, email} object of strings (old or edited by hand)
   if (!account || typeof account !== "object" || typeof account.first !== "string" || !account.first.trim()) account = null;
   else ["last", "email"].forEach(function (k) { if (typeof account[k] !== "string") account[k] = ""; });
+  // Never show more than the profile form allows (first/last name 40 characters, email 80)
+  if (account) account = { first: account.first.trim().slice(0, 40), last: account.last.trim().slice(0, 40), email: account.email.trim().slice(0, 80) };
   function showAccount(a) {
     if (!a || !a.first) return;
     var last = a.last || "";
@@ -691,7 +744,7 @@
   $$("[data-inline-add]").forEach(function (b) {
     var form = b.closest("form");
     function go() { if (!validate(form)) return; addFromForm(form); toast("Added"); form.reset(); }
-    b.addEventListener("click", go);
+    // The Add button is the form's submit button, so a click and Enter both arrive here
     form.addEventListener("submit", function (e) { e.preventDefault(); go(); });
   });
   /* Switches that confirm their change */
@@ -853,6 +906,7 @@
         var badge = $(".badge", $("[data-status-cell]", tr) || tr);
         if (badge) { badge.className = "badge badge-" + (st === "Completed" ? "success" : "warning"); badge.textContent = st; }
         tr.setAttribute("data-status", st);
+        syncRow(tr);
         var w = tr.closest("[data-table]"); if (w && w.cdTable) w.cdTable.refresh();
       }
       closeModal(m); toast("Hearing marked as " + st.toLowerCase());
