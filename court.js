@@ -48,9 +48,9 @@
               '<span class="cal-dots" aria-hidden="true">' + evs.slice(0, 4).map(function (e) { return '<i class="ev-' + e.type + '"></i>'; }).join("") + "</span></div>";
           }
           html += "</div>";
-          // Stop after the week that holds the last day of the month
-          var last = new Date(start); last.setDate(start.getDate() + w * 7 + 6);
-          if (last.getMonth() !== cur.getMonth() && w >= 3) break;
+          // Stop after the week that holds the last day of the month (also when that day is a Sunday)
+          var nextWeek = new Date(start); nextWeek.setDate(start.getDate() + (w + 1) * 7);
+          if (nextWeek.getMonth() !== cur.getMonth()) break;
         }
         grid.innerHTML = html;
       } else {
@@ -108,6 +108,8 @@
       sel = v.date; cur = parse(v.date); cur.setDate(1); shown[v.type] = 1;
       var chip = $('[data-cal-type="' + v.type + '"]'); if (chip) chip.setAttribute("aria-pressed", "true");
       render();
+      // The form is reset after this event, so put the chosen day back in its date field
+      setTimeout(function () { var f = $("[data-cal-form] [name=date]"); if (f) f.value = sel; }, 0);
     });
     render();
   }
@@ -135,7 +137,8 @@
             return '<tr><td class="mono cl-no">' + n + '</td><td class="mono strong">' + esc(h.time) + '</td><td><a class="case-title" href="case-detail.html?id=' + esc(h.case) + '">' + esc(h.title) + '</a><small class="muted d-block"><span class="mono">' + esc(h.case) + "</span> · " + esc(h.ref) + "</small>" +
               '<small class="cl-prep d-block">Prepare: ' + esc(h.prep) + "</small></td><td>" + esc(h.purpose) + (h.status !== "Scheduled" ? ' <span class="badge">' + esc(h.status) + "</span>" : "") + "</td><td>" + esc(h.room) + "</td><td>" + esc(p.name) + '</td><td class="no-print"><label class="check"><input type="checkbox" data-cl-ready><span class="sr-only">Ready: ' + esc(h.case) + "</span></label></td></tr>";
           }).join("") + "</tbody></table></div></section>";
-      }).join("") : '<div class="empty-note cl-empty"><p>No hearings are listed on this day.</p><button class="btn btn-sm" type="button" data-cl-jump>Go to the next day with hearings</button></div>';
+      }).join("") : '<div class="empty-note cl-empty"><p>No hearings are listed on this day.</p><button class="btn btn-sm" type="button" data-cl-jump>' +
+        (dates.some(function (d) { return d > day; }) ? "Go to the next day with hearings" : "Go to the last day with hearings") + "</button></div>";
       try { history.replaceState(null, "", "?date=" + day); } catch (e) { /* file:// in some browsers */ }
     }
     function step(dir) {

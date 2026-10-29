@@ -28,6 +28,9 @@
     $$("[data-money]", scope).forEach(function (m) { m.textContent = fmt(m.getAttribute("data-money"), m.hasAttribute("data-nocents")); });
     $$("[data-currency]", scope).forEach(function (m) { m.textContent = symbol().trim(); });
   }
+  // The demo's "today" (Monday 2 November 2026), used for rows added with forms. Set CASEDESK.today, or use the real date, in your project.
+  var today = /^\d{4}-\d{2}-\d{2}$/.test(cfg.today || "") ? cfg.today : "2026-11-02";
+  function shortDate(iso) { var p = iso.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
   window.CaseDesk = { fmt: fmt, symbol: symbol, tax: function () { return cfg.tax; }, showMoney: showMoney };
   if (cfg.currency !== "$") showMoney(document);
 
@@ -109,7 +112,11 @@
   function closeModal(m) {
     m.classList.remove("open");
     if (!$(".modal.open")) document.body.style.overflow = "";
-    if (lastFocus) lastFocus.focus();
+    // A menu item closes with its menu (or a button can be hidden by the form), so go back to a control that is still on screen
+    var shown = function (x) { return x && x.isConnected && x.getClientRects().length > 0; };
+    var back = lastFocus, dd = back && back.closest && back.closest("[data-dropdown]");
+    if (dd && !shown(back)) back = $("[data-dropdown-toggle]", dd);
+    if (shown(back)) back.focus();
   }
   // Delegated, so buttons drawn later by page scripts open their modals too
   document.addEventListener("click", function (e) {
@@ -368,7 +375,9 @@
       var v = f.value.trim(), n = Number(v);
       var bad = f.type === "checkbox" ? !f.checked : !v || (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) || (f.minLength > 0 && f.value.length < f.minLength) ||
         (f.type === "number" && (!isFinite(n) || (f.min !== "" && n < Number(f.min)) || (f.max !== "" && n > Number(f.max)) || stepBad(f, n))) ||
-        (f.hasAttribute("pattern") && !new RegExp("^(?:" + f.getAttribute("pattern") + ")$").test(v));
+        (f.hasAttribute("pattern") && !new RegExp("^(?:" + f.getAttribute("pattern") + ")$").test(v)) ||
+        // data-amount: money from 0.01 to 999,999.99
+        (f.hasAttribute("data-amount") && !(Number(v.replace(/,/g, "")) >= 0.01 && Number(v.replace(/,/g, "")) <= 999999.99));
       f.classList.toggle("is-invalid", bad);
       f.setAttribute("aria-invalid", bad);
       if (bad && ok) { f.focus(); ok = false; }
@@ -430,7 +439,7 @@
     var tpl = document.getElementById(form.getAttribute("data-template"));
     var target = $(form.getAttribute("data-add-to"));
     if (!tpl || !target) return;
-    var vals = { today: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }), iso: new Date().toISOString().slice(0, 10), id: String(Math.floor(4822 + Math.random() * 100)), me: "Eleanor Vance" };
+    var vals = { today: shortDate(today), iso: today, id: String(Math.floor(4822 + Math.random() * 100)), me: "Eleanor Vance" };
     $$("[name]", form).forEach(function (f) {
       var v = f.type === "checkbox" ? (f.checked ? "Yes" : "No") : f.value.trim();
       vals[f.name] = v;
@@ -438,13 +447,18 @@
       var opt = f.tagName === "SELECT" && f.options[f.selectedIndex];
       if (opt && opt.hasAttribute("data-tone")) vals[f.name + "Tone"] = opt.getAttribute("data-tone");
       if (opt) vals[f.name + "Text"] = opt.text;
-      if (f.type === "date" && v) { var dp = v.split("-"); vals[f.name + "Text"] = new Date(+dp[0], +dp[1] - 1, +dp[2]).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
+      if (f.type === "date" && v) vals[f.name + "Text"] = shortDate(v);
       if (f.name === "name" || f.name === "contact") {
         var parts = v.split(/\s+/);
         vals.initials = ((parts[0] || "?")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
       }
     });
-    if (vals.amount) { var amt = Number(String(vals.amount).replace(/[^0-9.]/g, "") || 0); vals.money = fmt(amt); vals.amountRaw = amt.toFixed(2); }
+    if (vals.amount) {
+      var amt = Number(String(vals.amount).replace(/[^0-9.]/g, "") || 0), total = Math.round(amt * (100 + cfg.tax)) / 100;
+      vals.money = fmt(amt); vals.amountRaw = amt.toFixed(2);
+      // {totalMoney} / {totalRaw} = the amount plus tax at the firm's rate (Settings → Firm)
+      vals.totalMoney = fmt(total); vals.totalRaw = total.toFixed(2);
+    }
     // {fieldMoney} = any decimal field (cost, price …) in the store currency, or "—" when left empty
     $$("input[inputmode=decimal][name]", form).forEach(function (f) {
       var raw = String(vals[f.name] || "").replace(/[^0-9.]/g, "");
@@ -486,8 +500,11 @@
     } else if (parts[0] === "status") {
       var badge = $(".badge", tr.querySelector("[data-status-cell]") || tr);
       if (badge) { badge.className = "badge badge-" + parts[2]; badge.textContent = parts[1]; }
+      // An invoice marked as paid has nothing left to pay: [data-balance-cell] shows 0.00
+      var bal = parts[1] === "Paid" && $("[data-balance-cell]", tr);
+      if (bal) { bal.setAttribute("data-value", "0.00"); bal.innerHTML = '<span data-money="0.00">' + fmt(0) + "</span>"; }
       // The row's data-status is what the table filter matches: change it only when the filter has that value
-        var flt = wrap && $("[data-table-filter]", wrap);
+      var flt = wrap && $("[data-table-filter]", wrap);
       if (!flt || $$("option", flt).some(function (o) { return o.value === parts[1]; })) tr.setAttribute("data-status", parts[1]);
       if (wrap && wrap.cdTable) wrap.cdTable.refresh();
       toast(b.getAttribute("data-done") || "Status changed to " + parts[1]);
@@ -501,8 +518,8 @@
        data-export-items="selector" → elements with data-csv='{"Column":"value",...}' */
   function csvCell(v) {
     v = String(v == null ? "" : v).replace(/\s+/g, " ").trim();
-    // Text starting with = + - @ would run as a formula in Excel (phone "+1 555 …"); plain numbers like -12.50 stay as they are
-    if (/^[=+\-@]/.test(v) && !/^-?[^\d\s]{0,4}\s?[\d,]+(\.\d+)?%?$/.test(v)) v = "'" + v;
+    // Text starting with = + - @ would run as a formula in Excel (phone "+1 555 …"); plain negative numbers like -12.50 or -$12.50 stay as they are
+    if (/^[=+\-@]/.test(v) && !/^-[$€£]?[\d,]*\.?\d+%?$/.test(v)) v = "'" + v;
     return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
   // Text of a table cell with a space between its parts ("Shop rent" + "EX-612"), skipping hidden icons and initials
@@ -568,7 +585,13 @@
       if (empty) empty.hidden = shown > 0;
     }
     if (q) q.addEventListener("input", run);
-    $$("[data-filter-tag]", box).forEach(function (b) { b.addEventListener("click", function () { tag = b.getAttribute("data-filter-tag"); run(); }); });
+    $$("[data-filter-tag]", box).forEach(function (b) {
+      b.addEventListener("click", function () {
+        tag = b.getAttribute("data-filter-tag");
+        $$("[data-filter-tag]", box).forEach(function (x) { x.setAttribute("aria-pressed", x === b); });
+        run();
+      });
+    });
   });
 
   /* Date range picker (dropdown options update the button label) */
@@ -703,6 +726,8 @@
         var names = el.getAttribute("data-review").split(","), out = [];
         names.forEach(function (n) {
           var f = form.elements[n]; if (!f) return;
+          // Skip the client fields of the mode that is not chosen (Existing / New client)
+          var mode = f.closest && f.closest("[data-mode-new], [data-mode-existing]"); if (mode && mode.hidden) return;
           var v = f.tagName === "SELECT" ? (f.value ? f.options[f.selectedIndex].text : "") : f.type === "checkbox" ? (f.checked ? "Yes" : "No") : f.value.trim();
           if (f.type === "date" && v) { var p = v.split("-"); v = new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }); }
           if (v) out.push(v);
@@ -764,17 +789,21 @@
       var t = $("[data-dropdown-toggle]", card); if (t) t.focus();
     });
     // Filter chips: [data-board-filter="who:EV" | "late" | "prio:High" | ""]
+    var filter = "";
+    function applyFilter() {
+      var k = filter.split(":")[0], v = filter.split(":")[1];
+      $$("[data-card]", board).forEach(function (c) {
+        c.hidden = !(!filter || (k === "late" ? c.classList.contains("is-late") : c.getAttribute("data-" + k) === v));
+      });
+      counts();
+    }
     $$("[data-board-filter]").forEach(function (chip) {
       chip.addEventListener("click", function () {
         $$("[data-board-filter]").forEach(function (x) { x.setAttribute("aria-pressed", x === chip); });
-        var f = chip.getAttribute("data-board-filter"), k = f.split(":")[0], v = f.split(":")[1];
-        $$("[data-card]", board).forEach(function (c) {
-          c.hidden = !(!f || (k === "late" ? c.classList.contains("is-late") : c.getAttribute("data-" + k) === v));
-        });
-        counts();
+        filter = chip.getAttribute("data-board-filter"); applyFilter();
       });
     });
-    board.cdMove = move; board.cdCounts = counts;
+    board.cdMove = move; board.cdCounts = applyFilter;
     counts();
   });
   // Cards added from the "Add task" form get their menu buttons wired by the board's delegated click handler
@@ -785,7 +814,7 @@
   /* Timer (time.html): [data-timer] with [data-timer-toggle], [data-timer-display], [data-timer-save] ---------- */
   $$("[data-timer]").forEach(function (box) {
     var disp = $("[data-timer-display]", box), btn = $("[data-timer-toggle]", box), save = $("[data-timer-save]", box), reset = $("[data-timer-reset]", box);
-    var started = 0, spent = 0, tick = null;
+    var started = 0, spent = 0, tick = null, form = $(box.getAttribute("data-timer-form"));
     function now() { return spent + (started ? Date.now() - started : 0); }
     function show() { var t = Math.floor(now() / 1000), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = t % 60; disp.textContent = (h < 10 ? "0" : "") + h + ":" + ("0" + m).slice(-2) + ":" + ("0" + sec).slice(-2); }
     function setRunning(on) {
@@ -803,10 +832,15 @@
     save.addEventListener("click", function () {
       var ms = now(); if (started) { spent = ms; started = 0; clearInterval(tick); }
       var hrs = Math.max(0.1, Math.round(ms / 360000) / 10);
-      var form = $(box.getAttribute("data-timer-form")), m = form && form.closest(".modal");
+      var m = form && form.closest(".modal");
       if (form) { var h = $("[name=hrs]", form); if (h) h.value = hrs.toFixed(1); var cs = $("[name=case]", form), tc = $("[data-timer-case]", box); if (cs && tc) cs.value = tc.value; var a = $("[name=act]", form), ta = $("[data-timer-act]", box); if (a && ta && ta.value.trim()) a.value = ta.value.trim(); }
-      spent = 0; show(); setRunning(false); save.disabled = true;
-      if (m) openModal(m.id);
+      // The timer stays paused (not cleared) until the entry is saved, so Cancel keeps the time
+      show(); setRunning(false);
+      if (m) { box.cdPending = true; openModal(m.id); } else { spent = 0; show(); save.disabled = true; }
+    });
+    if (form) form.addEventListener("casedesk:submit", function () {
+      if (!box.cdPending || started) return;
+      box.cdPending = false; spent = 0; show(); setRunning(false); save.disabled = true;
     });
     show(); save.disabled = true;
   });
