@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · CaseDesk</title>
+<meta name="description" content="Sign in to CaseDesk, the legal case management dashboard.">
+<meta name="theme-color" content="#111823">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script>window.CASEDESK={currency:'$',tax:10,firm:'Marlowe & Vance LLP'};try{var s=JSON.parse(localStorage.getItem('casedesk-firm'));if(s&&typeof s==='object')Object.assign(CASEDESK,s)}catch(e){}(function(){var t;try{t=localStorage.getItem('casedesk-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);try{if(localStorage.getItem('casedesk-collapsed')==='1')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})();</script>
+</head>
+<body>
+<div class="auth">
+  <main class="auth-form"><a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#1f3d64"/><path d="M20 8.5 9.5 14h21z" fill="#d8b46b"/><path d="M12 16.5h2.6v9.5H12zM18.7 16.5h2.6v9.5h-2.6zM25.4 16.5H28v9.5h-2.6z" fill="#fff"/><path d="M9.5 28h21v2.6h-21z" fill="#fff"/></svg><span class="brand-name">CaseDesk</span></a>
+    <div class="inner">
+      <section data-auth-view="signin"><h1>Welcome back</h1><p class="lead">Sign in to your firm's workspace.</p>
+        <form data-validate data-redirect="index.html" data-success="Signed in" novalidate>
+          <div class="field"><label class="label" for="lg-email">Work email</label><input class="input" id="lg-email" type="email" required maxlength="80" autocomplete="email" placeholder="you@firm.com"><span class="error-text">Enter a valid email address.</span></div>
+          <div class="field"><div class="flex justify-between items-center"><label class="label" for="lg-pass">Password</label><button class="link-btn small" type="button" data-auth-go="reset">Forgot password?</button></div>
+            <div class="input-wrap"><input class="input" id="lg-pass" type="password" required minlength="6" maxlength="64" autocomplete="current-password"><button class="icon-btn" type="button" data-password-toggle aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <span class="error-text">Enter your password (6 characters or more).</span></div>
+          <label class="check mt-16"><input type="checkbox" checked> <span>Keep me signed in on this device</span></label>
+          <button class="btn btn-primary btn-lg btn-block mt-24" type="submit">Sign in</button></form>
+        <p class="small muted mt-24 mb-0">Demo: any email and a password of 6 or more characters open the dashboard.</p></section>
+      <section data-auth-view="reset" hidden><h1>Reset password</h1><p class="lead">We'll email you a link to choose a new password.</p>
+        <form data-validate data-success="If that email has an account, a reset link is on its way" novalidate data-auth-done>
+          <div class="field"><label class="label" for="rs-email">Work email</label><input class="input" id="rs-email" type="email" required maxlength="80" autocomplete="email" placeholder="you@firm.com"><span class="error-text">Enter a valid email address.</span></div>
+          <button class="btn btn-primary btn-lg btn-block mt-24" type="submit">Send reset link</button></form>
+        <button class="link-btn mt-24" type="button" data-auth-go="signin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Back to sign in</button></section>
+    </div>
+    <p class="small muted mb-0">© <span data-year>2026</span> CaseDesk. All rights reserved.</p></main>
+  <div class="auth-art" aria-hidden="true">
+    <div class="art-card"><span class="eyebrow">Next hearing · in 2 days</span><b class="serif">Hollis Bakery Ltd v Granite Ovens Inc.</b><small>High Court, Commercial Division · Court 4 · 10:00</small>
+      <div class="art-tl"><i class="on"></i><span>Claim filed</span><i class="on"></i><span>Defence</span><i class="on"></i><span>Evidence</span><i></i><span>Arguments</span></div></div>
+    <p>Every case, hearing and deadline — in one calm place.</p>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
