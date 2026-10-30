@@ -415,6 +415,41 @@
     });
     $$("input, select, textarea", form).forEach(function (f) { f.addEventListener("input", function () { if (f.classList.contains("is-invalid")) { f.classList.remove("is-invalid"); f.removeAttribute("aria-invalid"); } }); });
   });
+  /* New case (demo): new-case.html passes the answers to cases.html in the address, and Cases shows the
+     new matter at the top of the list. Nothing is saved — a reload removes it. Connect your backend to keep it. */
+  $$("form[data-new-case]").forEach(function (form) {
+    form.addEventListener("casedesk:submit", function () {
+      var el = form.elements, txt = function (n) { var f = el[n]; if (!f) return ""; return f.tagName === "SELECT" ? (f.value ? f.options[f.selectedIndex].text : "") : f.value.trim(); };
+      var isNew = el.clientMode && el.clientMode.value === "new";
+      var q = new URLSearchParams({ new: "1", title: txt("title"), client: isNew ? txt("clientName") : txt("client").replace(/\s*\(CL-\d+\)$/, ""),
+        clientType: isNew ? txt("clientType") : "Existing client", clientId: isNew ? "" : txt("client") && el.client.value, area: txt("area"), kind: txt("kind"), court: txt("court"), lead: txt("lead"), priority: txt("priority"), hearing: txt("hearing") });
+      form.setAttribute("data-redirect", "cases.html?" + q.toString());
+    });
+  });
+  (function () {
+    var qs = new URLSearchParams(location.search), wrap = $("#cases[data-table]");
+    if (qs.get("new") !== "1" || !wrap || !wrap.cdTable) return;
+    var g = function (k, max) { return (qs.get(k) || "").trim().slice(0, max || 120); };
+    var title = g("title"); if (!title) return;
+    var tones = { High: "warning", Medium: "info", Low: "" }, prio = /^(High|Medium|Low)$/.test(g("priority")) ? g("priority") : "Medium";
+    var tr = document.createElement("tr");
+    tr.className = "flash"; tr.setAttribute("data-status", "Active"); tr.setAttribute("data-area", g("area", 60));
+    tr.innerHTML = '<td><div class="case-cell"><b class="case-title"></b><small><span class="mono">CD-2026-0195</span> · <span data-k="kind"></span> · <span class="badge badge-primary">New</span></small></div></td>' +
+      '<td><div class="person"><span class="avatar avatar-sm" style="background:#1f3d64" aria-hidden="true" data-k="ini"></span><div><b data-k="client"></b><small data-k="clientType"></small></div></div></td>' +
+      '<td data-k="area"></td><td data-k="court"></td><td><b class="strong" data-k="lead"></b></td>' +
+      (realDate(g("hearing", 10)) ? '<td data-value="' + g("hearing", 10) + '" data-k="hearing"></td>' : '<td data-value="9999-12-31"><span class="muted">Not listed</span></td>') +
+      '<td data-value="' + { High: 3, Medium: 2, Low: 1 }[prio] + '"><span class="badge' + (tones[prio] ? " badge-" + tones[prio] : "") + '" data-k="prio"></span></td><td data-status-cell><span class="badge badge-success">Active</span></td><td></td>';
+    var client = g("client", 80) || "New client", parts = client.split(/\s+/);
+    var vals = { kind: g("kind", 80), client: client, clientType: g("clientType", 40), area: g("area", 60), court: g("court", 80) || "Not issued yet", lead: g("lead", 60), prio: prio,
+      ini: ((parts[0] || "?")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase(), hearing: realDate(g("hearing", 10)) ? shortDate(g("hearing", 10)) : "" };
+    $(".case-title", tr).textContent = title;
+    $$("[data-k]", tr).forEach(function (el) { el.textContent = vals[el.getAttribute("data-k")] || ""; });
+    // An existing client links to its page, like the other rows
+    if (/^CL-\d{3}$/.test(g("clientId", 6))) { var b = $('[data-k="client"]', tr), a = document.createElement("a"); a.href = "client-detail.html?id=" + g("clientId", 6); a.textContent = b.textContent; b.textContent = ""; b.appendChild(a); }
+    wrap.cdTable.add(tr);
+    try { history.replaceState(null, "", location.pathname); } catch (e) { /* file:// in some browsers */ }
+    setTimeout(function () { toast("Case CD-2026-0195 opened. Demo only: it is not saved, so a reload removes it."); }, 300);
+  })();
   /* Dependent select: <select data-depends-on="ni-client"> lists only the options whose data-client matches the chosen value */
   $$("[data-depends-on]").forEach(function (sel) {
     var parent = document.getElementById(sel.getAttribute("data-depends-on")); if (!parent) return;
