@@ -156,4 +156,6 @@
     body.addEventListener("change", function (e) { if (e.target.matches("[data-cl-ready]")) { e.target.closest("tr").classList.toggle("is-ready", e.target.checked); toast(e.target.checked ? "Marked as ready" : "Marked as not ready"); } });
     draw();
   }
+  // Drawn: show the parts that waited for this script (see [data-pending] in style.css)
+  $$("[data-pending]").forEach(function (el) { el.removeAttribute("data-pending"); });
 })();

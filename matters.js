@@ -293,6 +293,8 @@
       var mi = $("[data-invoice-missing]"); mi.hidden = false;
       $("[data-missing-text]", mi).textContent = /^INV-\d{4}-\d{4}$/.test(no) ? "There is no invoice " + no + " in this demo." : "That is not an invoice number. Invoice numbers look like INV-2026-0142.";
       $$('[data-iv="no"]').forEach(function (e) { e.textContent = "—"; });
+      // The "not found" card has the page's only heading
+      $$(".page-head h1, .page-head [data-iv-sub]").forEach(function (e) { e.hidden = true; });
       document.title = "Invoice not found · CaseDesk";
     } else {
       document.title = iv.no + " · Invoice · CaseDesk";
@@ -320,6 +322,9 @@
       if (qs.get("print") === "1") setTimeout(function () { window.print(); }, 400);
     }
   }
+
+  // Drawn: show the parts that waited for this script (see [data-pending] in style.css)
+  $$("[data-pending]").forEach(function (el) { el.removeAttribute("data-pending"); });
 
   window.CaseDeskMatters = { renderCase: function (c) { if (data) { data.cases.push(c); } renderCase(c); } };
 })();

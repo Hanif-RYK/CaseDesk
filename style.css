@@ -33,6 +33,11 @@
   font-display: block;
 }
 
+/* Parts drawn by a script from the page's JSON (case, client, invoice, calendar, cause list) stay invisible
+   until they are drawn, so the page does not jump. If the script cannot run they appear after 2 seconds anyway. */
+[data-pending], body:has([data-pending]) .footer { visibility: hidden; animation: cd-reveal 0s 2s forwards; }
+@keyframes cd-reveal { to { visibility: visible; } }
+
 /* 2. Tokens ------------------------------------------------------------ */
 :root {
   /* Brand — change these to rebrand the whole template */
@@ -153,7 +158,7 @@ body {
 }
 h1, h2, h3, h4 { font-family: var(--font-ui); color: var(--ink); margin: 0; line-height: 1.2; letter-spacing: -.01em; }
 h1, h2, .serif { font-family: var(--font-display); letter-spacing: -.01em; }
-h1 { font-size: 31px; font-weight: 600; }
+h1 { font-size: 31px; font-weight: 600; overflow-wrap: break-word; }
 h2 { font-size: 20px; font-weight: 600; }
 h3 { font-size: 15.5px; font-weight: 700; }
 h4 { font-size: 14px; font-weight: 700; }
@@ -349,7 +354,7 @@ p a:not(.btn), .check a { text-decoration: underline; text-underline-offset: 2px
 .switch input:checked + .track::after { transform: translateX(16px); }
 .switch input:focus-visible + .track { box-shadow: var(--focus); }
 
-.dropzone { border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); padding: 26px; text-align: center; color: var(--ink-2); background: var(--surface-2); cursor: pointer; }
+.dropzone { display: block; width: 100%; font: inherit; border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); padding: 26px; text-align: center; color: var(--ink-2); background: var(--surface-2); cursor: pointer; }
 .dropzone.is-over { border-color: var(--primary); background: var(--primary-soft); }
 .dropzone svg { width: 30px; height: 30px; margin: 0 auto 8px; color: var(--primary); }
 
@@ -520,7 +525,7 @@ td { overflow-wrap: break-word; }
 .invoice-title { font: 600 36px var(--font-display); letter-spacing: -.01em; }
 .invoice-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 28px 0; }
 .invoice-meta h2, .invoice-meta h3 { font: 600 var(--fs-xs) var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
-.invoice-meta p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.invoice-meta p { margin: 0; font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
 .invoice-meta p b { color: var(--ink); }
 .totals { margin-left: auto; max-width: 320px; width: 100%; margin-top: 20px; }
 .totals div { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; color: var(--ink-2); }
@@ -631,6 +636,9 @@ td { overflow-wrap: break-word; }
 .case-facts dd { margin: 0; font-size: 14px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .case-facts dd small { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
 .case-facts .person b a { color: var(--ink); }
+.case-facts .person b, .case-facts .person small { white-space: normal; text-overflow: clip; overflow-wrap: normal; }
+/* Six narrow columns (laptop widths): drop the avatars so names fit */
+@media (min-width: 961px) and (max-width: 1360px) { .case-facts .person .avatar { display: none; } }
 .client-head .avatar-lg { border-radius: 16px; }
 .case-tabs { margin-bottom: 20px; }
 .tab-n:not(:empty) { margin-left: 7px; font: 600 var(--fs-xs) var(--font-mono); padding: 1px 7px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-3); }
@@ -863,7 +871,7 @@ td { overflow-wrap: break-word; }
 /* Invoice */
 .inv-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .inv-brand svg { width: 40px; height: 40px; }
-.inv-brand b { font: 600 22px var(--font-display); }
+.inv-brand b { font: 600 22px var(--font-display); overflow-wrap: anywhere; min-width: 0; }
 .inv-table { margin-top: 4px; }
 .inv-table .inv-sub td { background: var(--surface-2); font: 600 var(--fs-xs) var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); padding-top: 9px; padding-bottom: 9px; }
 .inv-bottom { display: flex; gap: 30px; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; }
@@ -879,6 +887,7 @@ td { overflow-wrap: break-word; }
 .form-actions .saved-note { margin-right: auto; }
 .profile-row { display: flex; gap: 14px; align-items: center; margin-top: 16px; }
 .setting-list > li { justify-content: flex-start; }
+.setting-list .grow { min-width: 0; overflow-wrap: anywhere; }
 .setting-list svg { width: 18px; height: 18px; color: var(--ink-3); flex: none; }
 .inline-add { display: flex; gap: 10px; margin-top: 16px; }
 .inline-add .input { max-width: 340px; }
@@ -1017,6 +1026,10 @@ td { overflow-wrap: break-word; }
   body { background: #fff; }
   .tabs, .case-actions, .modal, .missing { display: none !important; }
   .tab-panel[hidden] { display: block !important; }
+  /* Case summary: no buttons or filters on paper, and the overview lists that the full tabs repeat are left out */
+  [data-case-view] .btn, [data-case-view] .icon-btn, [data-case-view] .doc-tools, #cd-activity { display: none !important; }
+  #cd-overview .card:has([data-c-list="tasksOpen"], [data-c-list="notesLatest"], [data-c-list="docsLatest"]) { display: none !important; }
+  .tab-panel { margin-top: 18px; break-inside: auto; }
   .case-head { break-inside: avoid; }
   .cause-sheet { padding: 0; }
   .cl-table { border: 0; }
