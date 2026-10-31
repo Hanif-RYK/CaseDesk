@@ -7,10 +7,8 @@
 <meta name="description" content="How to use and customise the CaseDesk legal case management HTML template.">
 <meta name="theme-color" content="#111823">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preload" href="public-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="newsreader-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="jetbrains-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
+<script>/* Preload the fonts on a web server (not when opened from a file, where it would be blocked) */if(location.protocol!=='file:'){['public-sans-latin-wght-normal.woff2','newsreader-latin-wght-normal.woff2','jetbrains-mono-latin-wght-normal.woff2'].forEach(function(f){var l=document.createElement('link');l.rel='preload';l.as='font';l.type='font/woff2';l.crossOrigin='anonymous';l.href=f;document.head.appendChild(l)})}</script>
 <script>window.CASEDESK={currency:'$',tax:10,firm:'Marlowe & Vance LLP'};try{var s=JSON.parse(localStorage.getItem('casedesk-firm'));if(s&&typeof s==='object')Object.assign(CASEDESK,s)}catch(e){}(function(){var t;try{t=localStorage.getItem('casedesk-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);try{if(localStorage.getItem('casedesk-collapsed')==='1')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})();</script>
 <style>
   .doc { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 100vh; }
@@ -80,6 +78,7 @@
         <li><b class="strong">Add note, Upload, Add hearing, Add task, Log time and Close case</b> update the case on the page straight away (in the page only). Ticking a task marks it done.</li>
         <li>Deep links: <code>case-detail.html?id=CD-2026-0148#cd-hearings</code> opens the Hearings tab. Tab ids are <code>cd-overview</code>, <code>cd-timeline</code>, <code>cd-hearings</code>, <code>cd-docs</code>, <code>cd-tasks</code>, <code>cd-notes</code>, <code>cd-billing</code>, <code>cd-activity</code>.</li>
         <li><code>client-detail.html?id=CL-102</code> works the same way with the <code>cl-data</code> JSON. <code>invoice.html?no=INV-2026-0140</code> shows that invoice (<code>&amp;print=1</code> opens the print window).</li>
+      <li><b class="strong">New case:</b> after the four steps, <code>new-case.html</code> opens Cases with the new matter at the top of the list (marked <b class="strong">New</b>). It is passed in the address and is not saved, so a reload removes it. To keep cases, post the form to your backend instead.</li>
       </ul></section>
 
     <section id="court"><h2>Calendar and cause list</h2>

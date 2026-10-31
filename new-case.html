@@ -7,10 +7,8 @@
 <meta name="description" content="Open a new legal case in four steps: client, case details, team and dates, fees and review.">
 <meta name="theme-color" content="#111823">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preload" href="public-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="newsreader-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="jetbrains-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
+<script>/* Preload the fonts on a web server (not when opened from a file, where it would be blocked) */if(location.protocol!=='file:'){['public-sans-latin-wght-normal.woff2','newsreader-latin-wght-normal.woff2','jetbrains-mono-latin-wght-normal.woff2'].forEach(function(f){var l=document.createElement('link');l.rel='preload';l.as='font';l.type='font/woff2';l.crossOrigin='anonymous';l.href=f;document.head.appendChild(l)})}</script>
 <script>window.CASEDESK={currency:'$',tax:10,firm:'Marlowe & Vance LLP'};try{var s=JSON.parse(localStorage.getItem('casedesk-firm'));if(s&&typeof s==='object')Object.assign(CASEDESK,s)}catch(e){}(function(){var t;try{t=localStorage.getItem('casedesk-theme')}catch(e){}if(t!=='dark'&&t!=='light')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);try{if(localStorage.getItem('casedesk-collapsed')==='1')document.documentElement.classList.add('sidebar-collapsed')}catch(e){}})();</script>
 </head>
 <body>
@@ -60,7 +58,7 @@
 <div class="page-head"><div><nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span><a href="cases.html">Cases</a></span><span>New case</span></nav><h1>New case</h1><p>Open a new matter in four short steps.</p></div></div>
 <div class="stepper-wrap" data-stepper-wrap>
   <ol class="stepper"><li data-step-dot><span class="n">1</span><span>Client</span></li><li data-step-dot><span class="n">2</span><span>Case details</span></li><li data-step-dot><span class="n">3</span><span>Team and dates</span></li><li data-step-dot><span class="n">4</span><span>Fees and review</span></li></ol>
-  <form class="card card-body step-form" data-stepper data-validate data-success="Case opened — the case number is CD-2026-0195" data-redirect="cases.html" novalidate><section data-step aria-labelledby="st1"><h2 id="st1">Who is the client?</h2><p class="muted">Choose an existing client or add a new one.</p>
+  <form class="card card-body step-form" data-stepper data-validate data-new-case data-success="Case opened — the case number is CD-2026-0195" data-redirect="cases.html" novalidate><section data-step aria-labelledby="st1"><h2 id="st1">Who is the client?</h2><p class="muted">Choose an existing client or add a new one.</p>
   <div class="segmented-radio" role="radiogroup" aria-label="Client">
     <label><input type="radio" name="clientMode" value="existing" checked data-client-mode><span>Existing client</span></label>
     <label><input type="radio" name="clientMode" value="new" data-client-mode><span>New client</span></label></div>
@@ -108,7 +106,7 @@
     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span><b>Run a conflict check</b> on the client and every other party.</span></li>
     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 12.5h7M9 16h7"/></svg><span><b>Send a client care letter</b> with the scope of work and fee basis.</span></li>
     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg><span><b>Diarise limitation dates</b> as court deadlines so they show on the calendar.</span></li></ul>
-    <p class="small muted mb-0">This demo does not save the case. Connect the form to your backend — see the documentation.</p></aside>
+    <p class="small muted mb-0">In this demo the new case appears at the top of Cases until you reload the page. Connect the form to your backend to save it — see the documentation.</p></aside>
 </div>
 </main>
 <footer class="footer"><span>© <span data-year>2026</span> CaseDesk. All rights reserved.</span><span>Version 1.0.0</span></footer>
