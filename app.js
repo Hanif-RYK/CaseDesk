@@ -447,6 +447,12 @@
     // An existing client links to its page, like the other rows
     if (/^CL-\d{3}$/.test(g("clientId", 6))) { var b = $('[data-k="client"]', tr), a = document.createElement("a"); a.href = "client-detail.html?id=" + g("clientId", 6); a.textContent = b.textContent; b.textContent = ""; b.appendChild(a); }
     wrap.cdTable.add(tr);
+    // The counts on this page include the new matter: [data-case-count="all"] or a status ("Active" …), counted from every row of the table
+    var all = wrap.cdTable.allRows();
+    $$("[data-case-count]").forEach(function (el) {
+      var st = el.getAttribute("data-case-count");
+      el.textContent = st === "all" ? all.length : all.filter(function (r) { return rowStatus(r) === st; }).length;
+    });
     try { history.replaceState(null, "", location.pathname); } catch (e) { /* file:// in some browsers */ }
     setTimeout(function () { toast("Case CD-2026-0195 opened. Demo only: it is not saved, so a reload removes it."); }, 300);
   })();
